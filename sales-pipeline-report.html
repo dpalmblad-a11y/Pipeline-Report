@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Pipeline Report</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f3ef;
+    --surface: #ffffff;
+    --border: #dddbd4;
+    --text: #1a1a1a;
+    --text-muted: #7a7870;
+    --accent: #1a3a5c;
+    --accent-light: #e8eef5;
+    --red: #c0392b;
+    --red-light: #fdf0ee;
+    --green: #1e6b45;
+    --green-light: #eaf4ee;
+    --amber: #8a5a00;
+    --amber-light: #fdf6e3;
+    --stage-above: #4a6fa5;
+    --stage-top: #2e7d5e;
+    --stage-in: #7b5ea7;
+    --stage-best: #c0392b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  header {
+    background: var(--accent);
+    color: white;
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 3px solid #0f2540;
+  }
+
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  header .meta {
+    font-size: 12px;
+    opacity: 0.7;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .controls {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+
+  .status-bar {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-left: auto;
+  }
+
+  .status-bar.error { color: var(--red); }
+  .status-bar.success { color: var(--green); }
+
+  .main {
+    padding: 24px 32px;
+  }
+
+  .stage-section {
+    margin-bottom: 32px;
+  }
+
+  .stage-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .stage-label {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 3px;
+    color: white;
+  }
+
+  .stage-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .stage-total {
+    margin-left: auto;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .stage-above .stage-label { background: var(--stage-above); }
+  .stage-top .stage-label { background: var(--stage-top); }
+  .stage-in .stage-label { background: var(--stage-in); }
+  .stage-best .stage-label { background: var(--stage-best); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+
+  thead th {
+    background: #f8f7f4;
+    padding: 9px 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #faf9f6; }
+
+  td {
+    padding: 10px 12px;
+    vertical-align: top;
+    line-height: 1.4;
+  }
+
+  .deal-name {
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 13px;
+  }
+
+  .company-name {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .amount {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .date {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .date.overdue { color: var(--red); font-weight: 500; }
+  .date.soon { color: var(--amber); }
+  .date.ok { color: var(--green); }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    margin: 2px 2px 2px 0;
+  }
+
+  .tag-di {
+    background: var(--accent-light);
+    color: var(--accent);
+  }
+
+  .tag-flag {
+    background: var(--red-light);
+    color: var(--red);
+  }
+
+  .text-field {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  .task-box {
+    background: var(--amber-light);
+    border-left: 3px solid var(--amber);
+    padding: 6px 8px;
+    border-radius: 0 3px 3px 0;
+    font-size: 12px;
+    color: var(--amber);
+  }
+
+  .task-title {
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .task-notes {
+    font-size: 11px;
+    opacity: 0.85;
+    line-height: 1.4;
+  }
+
+  .no-value {
+    color: var(--border);
+    font-size: 11px;
+    font-style: italic;
+  }
+
+  .loading {
+    text-align: center;
+    padding: 60px 32px;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-box {
+    background: var(--red-light);
+    border: 1px solid #f5c6c2;
+    border-radius: 6px;
+    padding: 16px 20px;
+    color: var(--red);
+    font-size: 13px;
+    margin: 24px 0;
+  }
+
+  .error-box strong { display: block; margin-bottom: 4px; }
+
+  .summary-bar {
+    display: flex;
+    gap: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .summary-item .label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+
+  .summary-item .value {
+    font-size: 20px;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--accent);
+  }
+
+  .summary-item .value.currency { font-size: 16px; }
+
+  .col-deal { width: 16%; }
+  .col-amount { width: 8%; }
+  .col-close { width: 8%; }
+  .col-owner { width: 8%; }
+  .col-status { width: 14%; }
+  .col-flags { width: 12%; }
+  .col-di { width: 12%; }
+  .col-task { width: 22%; }
+
+  @media print {
+    header { background: #1a3a5c !important; -webkit-print-color-adjust: exact; }
+    .controls { display: none; }
+    .stage-label { -webkit-print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Sales Pipeline Report</h1>
+  <div class="meta" id="lastUpdated">Not loaded</div>
+</header>
+
+<div class="controls">
+  <button class="btn" id="refreshBtn" onclick="loadReport()">↻ Refresh</button>
+  <button class="btn btn-ghost" onclick="window.print()">Print / Export PDF</button>
+  <div class="status-bar" id="statusBar">Enter your API token in the file to load data.</div>
+</div>
+
+<div class="main" id="mainContent">
+  <div class="loading">Configure your API token in the file to get started.</div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  PASTE YOUR HUBSPOT TOKEN HERE
+// ─────────────────────────────────────────────
+const API_TOKEN = "pat-na1-992d4144-3ef1-43c0-87f9-7e423b9c7d57";
+// ─────────────────────────────────────────────
+
+const STAGE_ORDER = [
+  "Above the Funnel",
+  "Top of Funnel",
+  "In the Funnel",
+  "Best Few"
+];
+
+const STAGE_CSS = {
+  "Above the Funnel": "stage-above",
+  "Top of Funnel": "stage-top",
+  "In the Funnel": "stage-in",
+  "Best Few": "stage-best"
+};
+
+function setStatus(msg, type = "") {
+  const el = document.getElementById("statusBar");
+  el.textContent = msg;
+  el.className = "status-bar " + type;
+}
+
+async function hs(path) {
+  const res = await fetch(`http://localhost:8080/hs${path}`);
+  if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
+async function getAllDeals() {
+  let deals = [], after = null;
+  const props = [
+    "dealname","dealstage","amount","closedate","hubspot_owner_id",
+    "hs_next_activity_date","pipeline"
+  ].join(",");
+
+  do {
+    const url = `/crm/v3/objects/deals?limit=100&properties=${props}&associations=contacts${after ? "&after=" + after : ""}`;
+    const data = await hs(url);
+    deals = deals.concat(data.results || []);
+    after = data.paging?.next?.after || null;
+  } while (after);
+
+  return deals;
+}
+
+async function getCustomObjectSchema() {
+  try {
+    const data = await hs("/crm/v3/schemas");
+    return data.results || [];
+  } catch(e) {
+    return [];
+  }
+}
+
+async function getAssociatedCustomObjects(dealId, objectType) {
+  try {
+    const data = await hs(`/crm/v3/objects/deals/${dealId}/associations/${objectType}`);
+    return (data.results || []).map(r => r.id);
+  } catch(e) { return []; }
+}
+
+async function getCustomObject(objectType, id, props) {
+  try {
+    const data = await hs(`/crm/v3/objects/${objectType}/${id}?properties=${props.join(",")}`);
+    return data.properties || {};
+  } catch(e) { return {}; }
+}
+
+async function getOwnerName(ownerId) {
+  if (!ownerId) return null;
+  try {
+    const data = await hs(`/crm/v3/owners/${ownerId}`);
+    return `${data.firstName || ""} ${data.lastName || ""}`.trim();
+  } catch(e) { return null; }
+}
+
+async function getAssociatedTasks(dealId) {
+  try {
+    const assoc = await hs(`/crm/v3/objects/deals/${dealId}/associations/tasks`);
+    const ids = (assoc.results || []).map(r => r.id);
+    if (!ids.length) return [];
+
+    const tasks = [];
+    for (const id of ids.slice(0, 5)) {
+      try {
+        const t = await hs(`/crm/v3/objects/tasks/${id}?properties=hs_task_subject,hs_task_body,hs_task_status,hs_timestamp`);
+        if (t.properties?.hs_task_status !== "COMPLETED") {
+          tasks.push(t.properties);
+        }
+      } catch(e) {}
+    }
+    return tasks.sort((a, b) => new Date(a.hs_timestamp) - new Date(b.hs_timestamp));
+  } catch(e) { return []; }
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d)) return null;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function dateClass(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = (d - now) / (1000 * 60 * 60 * 24);
+  if (diff < 0) return "overdue";
+  if (diff < 7) return "soon";
+  return "ok";
+}
+
+function formatAmount(val) {
+  if (!val) return null;
+  const n = parseFloat(val);
+  if (isNaN(n)) return null;
+  return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+function cell(content) {
+  return content || `<span class="no-value">—</span>`;
+}
+
+function normalizeStageName(name) {
+  if (!name) return null;
+  const lower = name.toLowerCase();
+  for (const s of STAGE_ORDER) {
+    if (lower.includes(s.toLowerCase())) return s;
+  }
+  return null;
+}
+
+async function loadReport() {
+  if (!API_TOKEN || API_TOKEN === "YOUR_TOKEN_HERE") {
+    document.getElementById("mainContent").innerHTML = `
+      <div class="error-box">
+        <strong>API Token Not Set</strong>
+        Open this file in a text editor and replace <code>YOUR_TOKEN_HERE</code> with your HubSpot access token, then save and refresh.
+      </div>`;
+    return;
+  }
+
+  const btn = document.getElementById("refreshBtn");
+  btn.disabled = true;
+  setStatus("Loading deals...");
+  document.getElementById("mainContent").innerHTML = `<div class="loading"><span class="spinner"></span>Loading pipeline data...</div>`;
+
+  try {
+    // Load schemas to find custom object type names
+    setStatus("Loading schemas...");
+    const schemas = await getCustomObjectSchema();
+    
+    const dealStrategySchema = schemas.find(s => 
+      s.name?.toLowerCase().includes("deal_strateg") || 
+      s.labels?.singular?.toLowerCase().includes("deal strateg") ||
+      s.labels?.plural?.toLowerCase().includes("deal strateg")
+    );
+    
+    const diSchema = schemas.find(s =>
+      s.name?.toLowerCase().includes("decision_influencer") ||
+      s.name?.toLowerCase().includes("influencer") ||
+      s.labels?.singular?.toLowerCase().includes("decision influencer") ||
+      s.labels?.plural?.toLowerCase().includes("decision influencer")
+    );
+
+    const dsType = dealStrategySchema?.name || null;
+    const diType = diSchema?.name || null;
+
+    // Get deal strategy property names
+    const dsProps = dealStrategySchema?.properties?.map(p => p.name) || [];
+    const diProps = diSchema?.properties?.map(p => p.name) || [];
+
+    // Load all deals
+    setStatus("Loading deals...");
+    const allDeals = await getAllDeals();
+
+    // Filter to Sales Pipeline stages only
+    const targetStages = STAGE_ORDER.map(s => s.toLowerCase());
+    const filteredDeals = allDeals.filter(d => {
+      const stage = (d.properties?.dealstage || "").toLowerCase();
+      return targetStages.some(t => stage.includes(t));
+    });
+
+    // Load owners cache
+    const ownerIds = [...new Set(filteredDeals.map(d => d.properties?.hubspot_owner_id).filter(Boolean))];
+    const ownerMap = {};
+    setStatus(`Loading ${ownerIds.length} owners...`);
+    for (const id of ownerIds) {
+      ownerMap[id] = await getOwnerName(id);
+    }
+
+    // Enrich each deal
+    setStatus(`Enriching ${filteredDeals.length} deals...`);
+    const enriched = [];
+
+    for (let i = 0; i < filteredDeals.length; i++) {
+      const deal = filteredDeals[i];
+      const id = deal.id;
+      setStatus(`Loading deal ${i+1} of ${filteredDeals.length}...`);
+
+      let dsData = {}, diNames = [], tasks = [];
+
+      // Deal Strategy
+      if (dsType) {
+        const dsIds = await getAssociatedCustomObjects(id, dsType);
+        if (dsIds.length && dsProps.length) {
+          dsData = await getCustomObject(dsType, dsIds[0], dsProps);
+        }
+      }
+
+      // Decision Influencers
+      if (diType) {
+        const diIds = await getAssociatedCustomObjects(id, diType);
+        for (const diId of diIds.slice(0, 8)) {
+          const diData = await getCustomObject(diType, diId, diProps);
+          // Try common name fields
+          const name = diData.firstname && diData.lastname 
+            ? `${diData.firstname} ${diData.lastname}`
+            : diData.name || diData.full_name || diData.contact_name || Object.values(diData).find(v => v && typeof v === 'string' && v.length < 60);
+          if (name) diNames.push(name);
+        }
+      }
+
+      // Tasks
+      tasks = await getAssociatedTasks(id);
+
+      enriched.push({
+        id,
+        props: deal.properties,
+        dsData,
+        diNames,
+        tasks,
+        ownerName: ownerMap[deal.properties?.hubspot_owner_id] || null
+      });
+    }
+
+    // Find deal strategy field names (look for common patterns)
+    const findDsProp = (patterns) => {
+      if (!enriched.length) return null;
+      const sampleKeys = Object.keys(enriched[0]?.dsData || {});
+      for (const pat of patterns) {
+        const match = sampleKeys.find(k => k.toLowerCase().includes(pat));
+        if (match) return match;
+      }
+      return null;
+    };
+
+    const currentStatusField = findDsProp(["current_status", "status", "current"]);
+    const redFlagsField = findDsProp(["red_flag", "flag", "risk"]);
+
+    // Group by stage
+    const byStage = {};
+    for (const s of STAGE_ORDER) byStage[s] = [];
+    
+    for (const deal of enriched) {
+      const stage = normalizeStageName(deal.props?.dealstage);
+      if (stage) byStage[stage].push(deal);
+    }
+
+    // Calculate totals
+    const totalDeals = enriched.length;
+    const totalAmount = enriched.reduce((sum, d) => sum + (parseFloat(d.props?.amount) || 0), 0);
+
+    // Render
+    let html = `
+      <div class="summary-bar">
+        <div class="summary-item">
+          <span class="label">Total Deals</span>
+          <span class="value">${totalDeals}</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Pipeline Value</span>
+          <span class="value currency">${formatAmount(totalAmount) || "$0"}</span>
+        </div>
+        ${STAGE_ORDER.map(s => `
+          <div class="summary-item">
+            <span class="label">${s}</span>
+            <span class="value" style="font-size:16px">${byStage[s].length}</span>
+          </div>
+        `).join("")}
+      </div>`;
+
+    for (const stage of STAGE_ORDER) {
+      const deals = byStage[stage];
+      if (!deals.length) continue;
+
+      const stageTotal = deals.reduce((sum, d) => sum + (parseFloat(d.props?.amount) || 0), 0);
+      const cssClass = STAGE_CSS[stage];
+
+      html += `
+        <div class="stage-section ${cssClass}">
+          <div class="stage-header">
+            <span class="stage-label">${stage}</span>
+            <span class="stage-count">${deals.length} deal${deals.length !== 1 ? "s" : ""}</span>
+            ${stageTotal ? `<span class="stage-total">${formatAmount(stageTotal)}</span>` : ""}
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th class="col-deal">Deal</th>
+                <th class="col-amount">Amount</th>
+                <th class="col-close">Close Date</th>
+                <th class="col-owner">Owner</th>
+                <th class="col-status">Current Status</th>
+                <th class="col-flags">Red Flags</th>
+                <th class="col-di">Decision Influencers</th>
+                <th class="col-task">Next Task</th>
+              </tr>
+            </thead>
+            <tbody>`;
+
+      for (const deal of deals) {
+        const p = deal.props;
+        const amount = formatAmount(p?.amount);
+        const closeDate = formatDate(p?.closedate);
+        const nextActivityDate = formatDate(p?.hs_next_activity_date);
+        const closeDC = dateClass(p?.closedate);
+
+        const currentStatus = currentStatusField ? deal.dsData[currentStatusField] : null;
+        const redFlags = redFlagsField ? deal.dsData[redFlagsField] : null;
+
+        const nextTask = deal.tasks[0];
+        const taskDate = nextTask ? formatDate(nextTask.hs_timestamp) : null;
+        const taskDC = nextTask ? dateClass(nextTask.hs_timestamp) : "";
+
+        html += `
+          <tr>
+            <td>
+              <div class="deal-name">${cell(p?.dealname)}</div>
+            </td>
+            <td><span class="amount">${amount || '<span class="no-value">—</span>'}</span></td>
+            <td><span class="date ${closeDC}">${closeDate || '<span class="no-value">—</span>'}</span></td>
+            <td><span class="text-field">${deal.ownerName || '<span class="no-value">—</span>'}</span></td>
+            <td><span class="text-field">${currentStatus || '<span class="no-value">—</span>'}</span></td>
+            <td>${redFlags 
+              ? redFlags.split(/[,;\n]+/).filter(Boolean).map(f => `<span class="tag tag-flag">${f.trim()}</span>`).join("") 
+              : '<span class="no-value">—</span>'}</td>
+            <td>${deal.diNames.length 
+              ? deal.diNames.map(n => `<span class="tag tag-di">${n}</span>`).join("") 
+              : '<span class="no-value">—</span>'}</td>
+            <td>${nextTask ? `
+              <div class="task-box">
+                <div class="task-title">${nextTask.hs_task_subject || "Task"}</div>
+                ${taskDate ? `<div class="task-notes date ${taskDC}">Due: ${taskDate}</div>` : ""}
+                ${nextTask.hs_task_body ? `<div class="task-notes">${nextTask.hs_task_body.substring(0, 120)}${nextTask.hs_task_body.length > 120 ? "..." : ""}</div>` : ""}
+              </div>` : '<span class="no-value">—</span>'}
+            </td>
+          </tr>`;
+      }
+
+      html += `</tbody></table></div>`;
+    }
+
+    document.getElementById("mainContent").innerHTML = html;
+    document.getElementById("lastUpdated").textContent = "Updated " + new Date().toLocaleTimeString();
+    setStatus(`Loaded ${totalDeals} deals`, "success");
+
+  } catch(err) {
+    console.error(err);
+    document.getElementById("mainContent").innerHTML = `
+      <div class="error-box">
+        <strong>Error loading data</strong>
+        ${err.message}<br><br>
+        Check that your API token is correct and has the required scopes.
+      </div>`;
+    setStatus("Error loading data", "error");
+  }
+
+  btn.disabled = false;
+}
+
+// Auto-load if token is set
+if (API_TOKEN !== "YOUR_TOKEN_HERE") loadReport();
+</script>
+</body>
+</html>
